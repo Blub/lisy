@@ -1,0 +1,40 @@
+[package]
+name = "lisy"
+version = "0.1.0"
+description = "Linux specific high and middle level system level API library."
+edition = "2024"
+rust-version = "1.85"
+authors = ["Wolfgang Bumiller <w.bumiller@errno.eu>"]
+license = "MIT"
+keywords = [
+    "linux",
+    "mount",
+    "openat2",
+    "syscalls",
+]
+categories = [
+    "os",
+    "os::linux-apis",
+]
+
+[dependencies]
+bitflags = "2.4"
+libc = "0.2"
+
+[features]
+default = ["all"]
+all = [
+    "fs",
+    "mount",
+    "open",
+    "userns",
+    "unstable-ns",
+]
+fs = ["open"]
+mount = []
+open = []
+userns = ["open"]
+unstable-ns = []
+
+[dev-dependencies]
+anyhow = "1"
