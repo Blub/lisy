@@ -6,6 +6,8 @@ edition = "2024"
 rust-version = "1.85"
 authors = ["Wolfgang Bumiller <w.bumiller@errno.eu>"]
 license = "MIT"
+homepage = "https://github.com/Blub/lisy"
+repository = "https://github.com/Blub/lisy"
 keywords = [
     "linux",
     "mount",
