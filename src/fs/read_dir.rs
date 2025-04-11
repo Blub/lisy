@@ -86,7 +86,7 @@ impl AsFd for ReadDir {
 }
 
 /// A directory entry yielded by the [`ReadDir`] iterator.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct DirEnt {
     inner: LinuxDirent64,
     name: OsString,
@@ -111,6 +111,7 @@ impl DirEnt {
 }
 
 /// The type of an entry in a directory listing.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum EntryType {
     /// A block device.
     Block,
@@ -254,7 +255,7 @@ impl Iterator for GetDEnts {
 
 const DIRENT_SIZE: usize = offset_of!(LinuxDirent64, d_name);
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[repr(C)]
 struct LinuxDirent64 {
     d_ino: u64,
