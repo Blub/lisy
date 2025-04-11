@@ -36,7 +36,7 @@ impl ReadDir {
     }
 
     /// Open a directory for iteration.
-    pub fn read_at<F, P>(self, dirfd: &F, path: &P) -> io::Result<ReadDir>
+    pub fn read_at<F, P>(dirfd: &F, path: &P) -> io::Result<ReadDir>
     where
         P: ?Sized + CPath,
         F: ?Sized + AsFd,
