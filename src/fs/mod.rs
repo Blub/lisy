@@ -5,7 +5,9 @@ mod create_path;
 pub use create_path::CreatePath;
 
 pub mod read_dir;
+#[doc(inline)]
 pub use read_dir::{ReadDir, read_dir};
 
 pub mod stat;
+#[doc(inline)]
 pub use stat::{Device, Stat};
