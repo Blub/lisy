@@ -110,13 +110,21 @@ impl DirEnt {
     }
 }
 
+/// The type of an entry in a directory listing.
 pub enum EntryType {
+    /// A block device.
     Block,
+    /// A character device.
     Char,
+    /// A directory.
     Dir,
+    /// A FIFO.
     Fifo,
+    /// A symlink.
     Link,
+    /// A regular file.
     Regular,
+    /// A unix socket.
     Sock,
 }
 

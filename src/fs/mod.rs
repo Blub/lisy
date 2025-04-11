@@ -4,7 +4,7 @@
 mod create_path;
 pub use create_path::CreatePath;
 
-mod read_dir;
+pub mod read_dir;
 pub use read_dir::{ReadDir, read_dir};
 
 pub mod stat;
