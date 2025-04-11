@@ -144,6 +144,41 @@ impl EntryType {
             _ => return None,
         })
     }
+
+    /// Convenience method to check for `EntryType::Block`.
+    pub const fn is_block(self) -> bool {
+        matches!(self, Self::Block)
+    }
+
+    /// Convenience method to check for `EntryType::Char`.
+    pub const fn is_char(self) -> bool {
+        matches!(self, Self::Char)
+    }
+
+    /// Convenience method to check for `EntryType::Dir`.
+    pub const fn is_dir(self) -> bool {
+        matches!(self, Self::Dir)
+    }
+
+    /// Convenience method to check for `EntryType::Fifo`.
+    pub const fn is_fifo(self) -> bool {
+        matches!(self, Self::Fifo)
+    }
+
+    /// Convenience method to check for `EntryType::Link`.
+    pub const fn is_link(self) -> bool {
+        matches!(self, Self::Link)
+    }
+
+    /// Convenience method to check for `EntryType::Regular`.
+    pub const fn is_regular(self) -> bool {
+        matches!(self, Self::Regular)
+    }
+
+    /// Convenience method to check for `EntryType::Sock`.
+    pub const fn is_sock(self) -> bool {
+        matches!(self, Self::Sock)
+    }
 }
 
 struct GetDEnts {
