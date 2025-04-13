@@ -122,6 +122,9 @@ pub(crate) mod bytes;
 #[cfg(feature = "unstable-ns")]
 pub(crate) mod ioctl;
 
+#[cfg(any(feature = "mount", feature = "fs"))]
+pub(crate) mod mount_types;
+
 // END internal helpers
 
 #[cfg(feature = "fs")]

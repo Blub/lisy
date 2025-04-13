@@ -1,5 +1,6 @@
 //! Stat files with the more modern `statx(2)` call.
 
+use std::error::Error as StdError;
 use std::ffi::{CStr, c_int, c_uint};
 use std::fmt;
 use std::io;
@@ -7,6 +8,10 @@ use std::os::fd::{AsFd, AsRawFd, BorrowedFd};
 
 use crate::CPath;
 use crate::error::io_bail_last;
+use crate::mount_types::{MountId, ReusedMountId};
+
+const STATX_MNT_ID_UNIQUE: u32 = 0x00004000;
+const STATX_SUBVOL: u32 = 0x00008000;
 
 /// A builder for which information to query in a `statx(2)` call.
 #[derive(Clone, Copy, Debug)]
@@ -125,11 +130,17 @@ impl Stat<'_> {
         /// Request the creation time.
         btime : libc::STATX_BTIME,
 
-        /// Request the mount id the path resides on.
-        mount_id : libc::STATX_MNT_ID,
+        /// Request the *reused* mount id the path resides on. (Kernel version 5.7)
+        reused_mount_id : libc::STATX_MNT_ID,
+
+        /// Request the *unique* mount id the path resides on. (Kernel version 6.9)
+        unique_mount_id : STATX_MNT_ID_UNIQUE,
 
         /// Request direct I/O alignment information.
         dio_align : libc::STATX_DIOALIGN,
+
+        /// Request the subvolume id. (Kernel version 6.11)
+        subvol : STATX_SUBVOL,
 
         /// Request everything.
         all : libc::STATX_ALL,
@@ -185,7 +196,7 @@ impl Stat<'_> {
 
     /// The raw `statx()` implementation.
     fn stat_raw(self, path: &CStr) -> io::Result<Metadata> {
-        let mut data: libc::statx;
+        let mut data: CStatx;
         let rc = unsafe {
             data = std::mem::zeroed();
             libc::statx(
@@ -193,7 +204,7 @@ impl Stat<'_> {
                 path.as_ptr(),
                 self.at_flags,
                 self.mask,
-                &mut data,
+                &raw mut data as *mut libc::statx,
             )
         };
         if rc != 0 {
@@ -206,7 +217,7 @@ impl Stat<'_> {
 /// The result of a `statx(2)` operation via [`Stat`].
 #[derive(Clone)]
 pub struct Metadata {
-    data: libc::statx,
+    data: CStatx,
 }
 
 impl fmt::Debug for Metadata {
@@ -242,9 +253,27 @@ impl fmt::Debug for Metadata {
     }
 }
 
+impl From<CStatx> for Metadata {
+    fn from(data: CStatx) -> Self {
+        Self { data }
+    }
+}
+
 impl From<libc::statx> for Metadata {
     fn from(data: libc::statx) -> Self {
-        Self { data }
+        // The linux headers include `__spare` fields for these, but there were only 9 left when I
+        // copied them for `CStatx` so...
+        let data = unsafe {
+            let size = std::mem::size_of::<libc::statx>().min(std::mem::size_of::<CStatx>());
+            let mut my_data: CStatx = std::mem::zeroed();
+            std::ptr::copy(
+                &raw const data as *const u8,
+                &raw mut my_data as *mut u8,
+                size,
+            );
+            my_data
+        };
+        Self::from(data)
     }
 }
 
@@ -403,15 +432,36 @@ impl Metadata {
         }
     }
 
-    /// Get the mount id this file resides on.
+    /// Get the *reused* mount id this file resides on, this *fails* if the *unique* mount ID was
+    /// also requested, or the kernel was too old.
     ///
     /// This only fails on older kernels which do not know about this flag.
     ///
     /// Starting with kernel version 5.7, this will always return `Some`.
     ///
     /// See linux kernel commit `fa2fcf4f1df1559a` ("statx: add mount ID")`.
-    pub fn mount_id(&self) -> Option<u64> {
-        self.maybe(libc::STATX_MNT_ID, self.data.stx_mnt_id)
+    pub fn reused_mount_id(&self) -> Result<ReusedMountId, ReusedMountIdUnavailable> {
+        if self.data.stx_mask & STATX_MNT_ID_UNIQUE != 0 {
+            Err(ReusedMountIdUnavailable::UniqueIdAvailable(
+                MountId::from_raw(self.data.stx_mnt_id),
+            ))
+        } else if self.data.stx_mask & libc::STATX_MNT_ID != 0 {
+            Ok(ReusedMountId::from_raw(self.data.stx_mnt_id as u32))
+        } else {
+            Err(ReusedMountIdUnavailable::Unavailable)
+        }
+    }
+
+    /// Get the *unique* mount id this file resides on.
+    ///
+    /// This only fails on older kernels which do not know about this flag.
+    ///
+    /// Starting with kernel version 6.9, this will always return `Some`.
+    ///
+    /// See linux kernel commit `98d2b43081972abe` ("add unique mount ID")`.
+    pub fn unique_mount_id(&self) -> Option<MountId> {
+        self.maybe(STATX_MNT_ID_UNIQUE, self.data.stx_mnt_id)
+            .map(MountId::from_raw)
     }
 
     /// Memory buffer alignment for direct I/O.
@@ -422,6 +472,17 @@ impl Metadata {
     /// File offset alignment for direct I/O.
     pub fn dio_offset_align(&self) -> Option<u32> {
         self.maybe(libc::STATX_DIOALIGN, self.data.stx_dio_offset_align)
+    }
+
+    /// Get the subvolume ID this file resides on.
+    ///
+    /// These are the IDs used in `btrfs` and `bcachefs`.
+    ///
+    /// This was introduced in kernel verison 6.11.
+    ///
+    /// See linux kernel commit `2a82bb02941fb53d` ("statx: stx_subvol").
+    pub fn subvolume_id(&self) -> Option<u64> {
+        self.maybe(STATX_SUBVOL, self.data.stx_subvol)
     }
 }
 
@@ -450,4 +511,59 @@ pub struct Device {
     pub major: u32,
     /// The minor number.
     pub minor: u32,
+}
+
+/// An error querying the [`ReusedMountId] id of a [`Stat`] call can either be that it was not
+/// included in the request, the kernel was too old, or the *unique* id was requested.
+#[derive(Clone, Copy, Debug)]
+pub enum ReusedMountIdUnavailable {
+    /// The id was not requested or the kernel was too old.
+    Unavailable,
+    /// The *unique* id was requested.
+    UniqueIdAvailable(MountId),
+}
+
+impl StdError for ReusedMountIdUnavailable {}
+
+impl fmt::Display for ReusedMountIdUnavailable {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Unavailable => f.write_str("mount id not requested or kernel too old"),
+            Self::UniqueIdAvailable(_) => f.write_str("unique mount id replaces reused mount id"),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+#[repr(C)]
+struct CStatx {
+    stx_mask: u32,
+    stx_blksize: u32,
+    stx_attributes: u64,
+    stx_nlink: u32,
+    stx_uid: u32,
+    stx_gid: u32,
+    stx_mode: u16,
+    __spare0: u16,
+    stx_ino: u64,
+    stx_size: u64,
+    stx_blocks: u64,
+    stx_attributes_mask: u64,
+    stx_atime: libc::statx_timestamp,
+    stx_btime: libc::statx_timestamp,
+    stx_ctime: libc::statx_timestamp,
+    stx_mtime: libc::statx_timestamp,
+    stx_rdev_major: u32,
+    stx_rdev_minor: u32,
+    stx_dev_major: u32,
+    stx_dev_minor: u32,
+    stx_mnt_id: u64,
+    stx_dio_mem_align: u32,
+    stx_dio_offset_align: u32,
+    stx_subvol: u64,
+    stx_atomic_write_unit_min: u32,
+    stx_atomic_write_unit_max: u32,
+    stx_atomic_write_segments_max: u32,
+    stx_dio_read_offset_align: u32,
+    __spare3: [u64; 9],
 }
