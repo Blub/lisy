@@ -5,7 +5,12 @@ use std::mem::size_of;
 use std::os::fd::{AsRawFd, RawFd};
 use std::os::raw::c_int;
 
+#[cfg(feature = "unstable-ns")]
+use std::os::fd::FromRawFd;
+
 use crate::error::io_assert;
+#[cfg(feature = "unstable-ns")]
+use crate::ns::{Mnt, NsFd};
 
 /// Information about a mount namespace.
 #[derive(Clone, Copy, Debug)]
@@ -19,8 +24,22 @@ pub struct MountNsInfo {
 }
 
 const NS_MNT_GET_INFO: c_int = crate::ioctl::ior::<MountNsInfo>(0xb7, 10);
+const NS_MNT_GET_NEXT: c_int = crate::ioctl::ior::<MountNsInfo>(0xb7, 11);
+const NS_MNT_GET_PREV: c_int = crate::ioctl::ior::<MountNsInfo>(0xb7, 12);
 
 impl MountNsInfo {
+    fn info_ioctl(fd: RawFd, ctl: c_int) -> io::Result<(Self, c_int)> {
+        let mut info = Self {
+            size: u32::try_from(size_of::<Self>()).unwrap(),
+            nr_mounts: 0,
+            mnt_ns_id: 0,
+        };
+
+        let rc = unsafe { libc::ioctl(fd, ctl as _, &mut info) };
+
+        Ok((info, rc))
+    }
+
     /// Retrieve the mount information for a file descriptor.
     pub fn get<F: ?Sized + AsRawFd>(fd: &F) -> io::Result<Self> {
         Self::get_raw(fd.as_raw_fd())
@@ -28,15 +47,38 @@ impl MountNsInfo {
 
     /// Retrieve the mount information for a raw file descriptor.
     pub fn get_raw(fd: RawFd) -> io::Result<Self> {
-        let mut info = Self {
-            size: u32::try_from(size_of::<Self>()).unwrap(),
-            nr_mounts: 0,
-            mnt_ns_id: 0,
-        };
-
-        let rc = unsafe { libc::ioctl(fd, NS_MNT_GET_INFO as _, &mut info) };
+        let (info, rc) = Self::info_ioctl(fd, NS_MNT_GET_INFO)?;
         io_assert!(rc == 0);
-
         Ok(info)
+    }
+
+    #[cfg(feature = "unstable-ns")]
+    /// Get the next mount namespace information and a file descriptor for it.
+    pub fn next<F: ?Sized + AsRawFd>(fd: &F) -> io::Result<(Self, NsFd<Mnt>)> {
+        Self::next_raw(fd.as_raw_fd())
+    }
+
+    #[cfg(feature = "unstable-ns")]
+    /// Get the next mount namespace information and a file descriptor for it.
+    pub fn next_raw(fd: RawFd) -> io::Result<(Self, NsFd<Mnt>)> {
+        let (info, rc) = Self::info_ioctl(fd, NS_MNT_GET_NEXT)?;
+        io_assert!(rc >= 0);
+        let fd = unsafe { NsFd::from_raw_fd(rc) };
+        Ok((info, fd))
+    }
+
+    #[cfg(feature = "unstable-ns")]
+    /// Get the previous mount namespace information and a file descriptor for it.
+    pub fn previous<F: ?Sized + AsRawFd>(fd: &F) -> io::Result<(Self, NsFd<Mnt>)> {
+        Self::previous_raw(fd.as_raw_fd())
+    }
+
+    #[cfg(feature = "unstable-ns")]
+    /// Get the previous mount namespace information and a file descriptor for it.
+    pub fn previous_raw(fd: RawFd) -> io::Result<(Self, NsFd<Mnt>)> {
+        let (info, rc) = Self::info_ioctl(fd, NS_MNT_GET_PREV)?;
+        io_assert!(rc >= 0);
+        let fd = unsafe { NsFd::from_raw_fd(rc) };
+        Ok((info, fd))
     }
 }

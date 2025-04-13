@@ -132,7 +132,17 @@ impl<K: Kind> NsFd<K> {
 
 impl NsFd<Mnt> {
     /// Retrieve the mount information for this file descriptor.
-    pub fn get_mount_info(&self) -> io::Result<MountNsInfo> {
+    pub fn mount_info(&self) -> io::Result<MountNsInfo> {
         MountNsInfo::get_raw(self.as_raw_fd())
+    }
+
+    /// Get the next mount namespace information and a file descriptor for it.
+    pub fn next_mount_info(&self) -> io::Result<(MountNsInfo, Self)> {
+        MountNsInfo::next_raw(self.as_raw_fd())
+    }
+
+    /// Get the previous mount namespace information and a file descriptor for it.
+    pub fn previous_mount_info(&self) -> io::Result<(MountNsInfo, Self)> {
+        MountNsInfo::previous_raw(self.as_raw_fd())
     }
 }
