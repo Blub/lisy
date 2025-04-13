@@ -119,6 +119,9 @@ pub(crate) mod error;
 #[cfg(feature = "fs")]
 pub(crate) mod bytes;
 
+#[cfg(feature = "unstable-ns")]
+pub(crate) mod ioctl;
+
 // END internal helpers
 
 #[cfg(feature = "fs")]
