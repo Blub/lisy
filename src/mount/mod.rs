@@ -22,6 +22,8 @@ pub mod mount;
 #[doc(inline)]
 pub use mount::{Mount, MountSetAttr, MoveMount, OpenTree};
 
+pub mod ns;
+
 /// Wrapper for the `umount2(2)` system call.
 pub fn umount<P>(path: &P, flags: c_int) -> io::Result<()>
 where
