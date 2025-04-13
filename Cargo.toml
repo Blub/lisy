@@ -36,7 +36,7 @@ fs = ["open"]
 mount = []
 open = []
 userns = ["open"]
-unstable-ns = []
+unstable-ns = ["open"]
 
 [dev-dependencies]
 anyhow = "1"
