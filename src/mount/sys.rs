@@ -66,3 +66,33 @@ bitflags! {
         const NOSYMFOLLOW = 0x0020_0000;
     }
 }
+
+bitflags! {
+    /// Request mask for `statmount(2)`.
+    pub struct StatMount: std::os::raw::c_uint {
+        /// Want/got sb_...
+        const STATMOUNT_SB_BASIC       = 0x00000001;
+        /// Want/got mnt_...
+        const STATMOUNT_MNT_BASIC      = 0x00000002;
+        /// Want/got propagate_from
+        const STATMOUNT_PROPAGATE_FROM = 0x00000004;
+        /// Want/got mnt_root
+        const STATMOUNT_MNT_ROOT       = 0x00000008;
+        /// Want/got mnt_point
+        const STATMOUNT_MNT_POINT      = 0x00000010;
+        /// Want/got fs_type
+        const STATMOUNT_FS_TYPE	       = 0x00000020;
+        /// Want/got mnt_ns_id
+        const STATMOUNT_MNT_NS_ID      = 0x00000040;
+        /// Want/got mnt_opts
+        const STATMOUNT_MNT_OPTS       = 0x00000080;
+        /// Want/got fs_subtype
+        const STATMOUNT_FS_SUBTYPE     = 0x00000100;
+        /// Want/got sb_source
+        const STATMOUNT_SB_SOURCE      = 0x00000200;
+        /// Want/got opt_...
+        const STATMOUNT_OPT_ARRAY      = 0x00000400;
+        /// Want/got opt_sec...
+        const STATMOUNT_OPT_SEC_ARRAY  = 0x00000800;
+    }
+}
