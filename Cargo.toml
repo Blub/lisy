@@ -29,12 +29,14 @@ all = [
     "fs",
     "mount",
     "open",
+    "pidfd",
     "userns",
     "unstable-ns",
 ]
 fs = ["open"]
 mount = []
 open = []
+pidfd = []
 userns = ["open"]
 unstable-ns = ["open"]
 

@@ -119,7 +119,7 @@ pub(crate) mod error;
 #[cfg(feature = "fs")]
 pub(crate) mod bytes;
 
-#[cfg(feature = "unstable-ns")]
+#[cfg(any(feature = "unstable-ns", feature = "pidfd"))]
 pub(crate) mod ioctl;
 
 #[cfg(any(feature = "mount", feature = "fs"))]
@@ -138,6 +138,9 @@ pub mod open;
 
 #[cfg(feature = "userns")]
 pub mod userns;
+
+#[cfg(feature = "pidfd")]
+pub mod pidfd;
 
 #[cfg(feature = "unstable-ns")]
 pub mod ns;

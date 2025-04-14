@@ -2,7 +2,7 @@
 
 use std::ffi::c_int;
 
-//pub const IOC_NONE: c_int = 0;
+pub const IOC_NONE: c_int = 0;
 //pub const IOC_WRITE: c_int = 1;
 pub const IOC_READ: c_int = 2;
 
@@ -22,4 +22,8 @@ pub const fn ioc(dir: c_int, ty: c_int, nr: c_int, size: c_int) -> c_int {
 
 pub const fn ior<T: Sized>(ty: c_int, nr: c_int) -> c_int {
     ioc(IOC_READ, ty, nr, std::mem::size_of::<T>() as c_int)
+}
+
+pub const fn io(ty: c_int, nr: c_int) -> c_int {
+    ioc(IOC_NONE, ty, nr, 0)
 }
