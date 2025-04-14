@@ -31,14 +31,14 @@ all = [
     "open",
     "pidfd",
     "userns",
-    "unstable-ns",
+    "ns",
 ]
 fs = ["open"]
 mount = []
 open = []
-pidfd = []
+pidfd = ["ns"]
 userns = ["open"]
-unstable-ns = ["open"]
+ns = ["open"]
 
 [dev-dependencies]
 anyhow = "1"

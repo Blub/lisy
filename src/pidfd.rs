@@ -5,7 +5,6 @@ use std::io;
 use std::os::fd::{AsFd, AsRawFd, BorrowedFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
 
 use crate::error::io_assert;
-/*
 use crate::ns::{Mnt, NsFd};
 
 #[rustfmt::skip]
@@ -27,7 +26,6 @@ mod ioctls {
     // pub const PIDFD_GET_USER_NAMESPACE              : c_int = io(PIDFS_IOCTL_MAGIC, 9);
     // pub const PIDFD_GET_UTS_NAMESPACE               : c_int = io(PIDFS_IOCTL_MAGIC, 10);
 }
-*/
 
 /// A pid file descriptor is a handle to a process.
 ///
@@ -75,7 +73,6 @@ impl PidFd {
         }
     }
 
-    /*
     /// Get a handle to the process' mount namespace.
     pub fn mount_namespace(&self) -> io::Result<NsFd<Mnt>> {
         unsafe {
@@ -84,5 +81,4 @@ impl PidFd {
             Ok(NsFd::from_raw_fd(fd))
         }
     }
-    */
 }

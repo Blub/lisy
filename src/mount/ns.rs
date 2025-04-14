@@ -5,11 +5,11 @@ use std::mem::size_of;
 use std::os::fd::{AsRawFd, RawFd};
 use std::os::raw::c_int;
 
-#[cfg(feature = "unstable-ns")]
+#[cfg(feature = "ns")]
 use std::os::fd::FromRawFd;
 
 use crate::error::io_assert;
-#[cfg(feature = "unstable-ns")]
+#[cfg(feature = "ns")]
 use crate::ns::{Mnt, NsFd};
 
 /// Information about a mount namespace.
@@ -52,13 +52,13 @@ impl MountNsInfo {
         Ok(info)
     }
 
-    #[cfg(feature = "unstable-ns")]
+    #[cfg(feature = "ns")]
     /// Get the next mount namespace information and a file descriptor for it.
     pub fn next<F: ?Sized + AsRawFd>(fd: &F) -> io::Result<(Self, NsFd<Mnt>)> {
         Self::next_raw(fd.as_raw_fd())
     }
 
-    #[cfg(feature = "unstable-ns")]
+    #[cfg(feature = "ns")]
     /// Get the next mount namespace information and a file descriptor for it.
     pub fn next_raw(fd: RawFd) -> io::Result<(Self, NsFd<Mnt>)> {
         let (info, rc) = Self::info_ioctl(fd, NS_MNT_GET_NEXT)?;
@@ -67,13 +67,13 @@ impl MountNsInfo {
         Ok((info, fd))
     }
 
-    #[cfg(feature = "unstable-ns")]
+    #[cfg(feature = "ns")]
     /// Get the previous mount namespace information and a file descriptor for it.
     pub fn previous<F: ?Sized + AsRawFd>(fd: &F) -> io::Result<(Self, NsFd<Mnt>)> {
         Self::previous_raw(fd.as_raw_fd())
     }
 
-    #[cfg(feature = "unstable-ns")]
+    #[cfg(feature = "ns")]
     /// Get the previous mount namespace information and a file descriptor for it.
     pub fn previous_raw(fd: RawFd) -> io::Result<(Self, NsFd<Mnt>)> {
         let (info, rc) = Self::info_ioctl(fd, NS_MNT_GET_PREV)?;
