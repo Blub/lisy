@@ -34,6 +34,11 @@ impl MountId {
     pub const fn from_raw(id: u64) -> Self {
         Self(id)
     }
+
+    /// The "root" mount id. Used for `listmount(2)`.
+    pub const fn root() -> Self {
+        Self(!0)
+    }
 }
 
 /// *Reused* mount IDs are the ones used in `/proc/*/mountinfo`.

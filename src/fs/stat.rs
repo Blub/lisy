@@ -9,6 +9,7 @@ use std::os::fd::{AsFd, AsRawFd, BorrowedFd};
 use crate::CPath;
 use crate::error::io_bail_last;
 use crate::mount_types::{MountId, ReusedMountId};
+use crate::types::Device;
 
 const STATX_MNT_ID_UNIQUE: u32 = 0x00004000;
 const STATX_SUBVOL: u32 = 0x00008000;
@@ -502,15 +503,6 @@ impl From<libc::statx_timestamp> for Timestamp {
             nsec: t.tv_nsec,
         }
     }
-}
-
-/// A device id.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-pub struct Device {
-    /// The major number.
-    pub major: u32,
-    /// The minor number.
-    pub minor: u32,
 }
 
 /// An error querying the [`ReusedMountId] id of a [`Stat`] call can either be that it was not

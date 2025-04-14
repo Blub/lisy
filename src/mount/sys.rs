@@ -29,11 +29,18 @@ mod syscalls {
 
     /// mount_setattr(2)
     pub const SYS_mount_setattr : c_long = 442;
+
+    /// statmount(2)
+    pub const SYS_statmount     : c_long = 457;
+
+    /// listmount(2)
+    pub const SYS_listmount     : c_long = 458;
 }
 pub use syscalls::*;
 
 bitflags! {
     /// Mount attributes for `Superblock::mount` or Mount::setattr.
+    #[derive(Clone, Copy, Debug)]
     pub struct MountAttr: std::os::raw::c_uint {
         /// Read-only flag.
         const RDONLY      = 0x0000_0001;
@@ -69,30 +76,72 @@ bitflags! {
 
 bitflags! {
     /// Request mask for `statmount(2)`.
-    pub struct StatMount: std::os::raw::c_uint {
-        /// Want/got sb_...
-        const STATMOUNT_SB_BASIC       = 0x00000001;
-        /// Want/got mnt_...
-        const STATMOUNT_MNT_BASIC      = 0x00000002;
-        /// Want/got propagate_from
-        const STATMOUNT_PROPAGATE_FROM = 0x00000004;
+    #[derive(Clone, Copy, Debug)]
+    pub struct StatMountFlags: u64 {
+        /// Request basic superblock information.
+        const SB_BASIC       = 0x00000001;
+
+        /// Request basic mount information.
+        const MNT_BASIC      = 0x00000002;
+
+        /// Request propagate information.
+        const PROPAGATE_FROM = 0x00000004;
+
         /// Want/got mnt_root
-        const STATMOUNT_MNT_ROOT       = 0x00000008;
+        const MNT_ROOT       = 0x00000008;
+
         /// Want/got mnt_point
-        const STATMOUNT_MNT_POINT      = 0x00000010;
+        const MNT_POINT      = 0x00000010;
+
         /// Want/got fs_type
-        const STATMOUNT_FS_TYPE	       = 0x00000020;
+        const FS_TYPE        = 0x00000020;
+
         /// Want/got mnt_ns_id
-        const STATMOUNT_MNT_NS_ID      = 0x00000040;
+        const MNT_NS_ID      = 0x00000040;
+
         /// Want/got mnt_opts
-        const STATMOUNT_MNT_OPTS       = 0x00000080;
+        const MNT_OPTS       = 0x00000080;
+
         /// Want/got fs_subtype
-        const STATMOUNT_FS_SUBTYPE     = 0x00000100;
+        const FS_SUBTYPE     = 0x00000100;
+
         /// Want/got sb_source
-        const STATMOUNT_SB_SOURCE      = 0x00000200;
+        const SB_SOURCE      = 0x00000200;
+
         /// Want/got opt_...
-        const STATMOUNT_OPT_ARRAY      = 0x00000400;
+        const OPT_ARRAY      = 0x00000400;
+
         /// Want/got opt_sec...
-        const STATMOUNT_OPT_SEC_ARRAY  = 0x00000800;
+        const OPT_SEC_ARRAY  = 0x00000800;
+    }
+}
+
+bitflags! {
+    /// The superblock flags exposed by `statmount(2)`.
+    #[derive(Clone, Copy, Debug)]
+    pub struct SuperblockFlags: u32 {
+        /// Mount read-only.
+        const RDONLY       = 1 << 0;
+        /// Writes are synced at once.
+        const SYNCHRONOUS  = 1 << 4;
+        /// Directory modifications are synchronous.
+        const DIRSYNC      = 1 << 7;
+        /// Update the on-disk [acm]times lazily.
+        const LAZYTIME     = 1 << 25;
+    }
+}
+
+bitflags! {
+    /// Mount propagation flags.
+    #[derive(Clone, Copy, Debug)]
+    pub struct MountPropagation: u64 {
+        /// An unbindable mount.
+        const UNBINDABLE = 1<<17;
+        /// A private mount.
+        const PRIVATE    = 1<<18;
+        /// A slave mount.
+        const SLAVE      = 1<<19;
+        /// A shjared mount.
+        const SHARED     = 1<<20;
     }
 }

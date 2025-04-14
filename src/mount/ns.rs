@@ -12,6 +12,8 @@ use crate::error::io_assert;
 #[cfg(feature = "ns")]
 use crate::ns::{Mnt, NsFd};
 
+use crate::mount_types::MountNsId;
+
 /// Information about a mount namespace.
 #[derive(Clone, Copy, Debug)]
 #[repr(C)]
@@ -20,7 +22,7 @@ pub struct MountNsInfo {
     /// Number of mounts in the namespace.
     pub nr_mounts: u32,
     /// The namespace's ID.
-    pub mnt_ns_id: u64,
+    pub mnt_ns_id: MountNsId,
 }
 
 const NS_MNT_GET_INFO: c_int = crate::ioctl::ior::<MountNsInfo>(0xb7, 10);
@@ -32,7 +34,7 @@ impl MountNsInfo {
         let mut info = Self {
             size: u32::try_from(size_of::<Self>()).unwrap(),
             nr_mounts: 0,
-            mnt_ns_id: 0,
+            mnt_ns_id: MountNsId::from_raw(0),
         };
 
         let rc = unsafe { libc::ioctl(fd, ctl as _, &mut info) };

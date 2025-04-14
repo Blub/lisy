@@ -125,6 +125,9 @@ pub(crate) mod ioctl;
 #[cfg(any(feature = "mount", feature = "fs"))]
 pub(crate) mod mount_types;
 
+#[cfg(any(feature = "mount", feature = "fs"))]
+pub(crate) mod types;
+
 // END internal helpers
 
 #[cfg(feature = "fs")]

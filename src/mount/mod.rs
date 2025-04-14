@@ -8,6 +8,9 @@ use std::io;
 use crate::CPath;
 use crate::error::io_assert;
 
+#[doc(inline)]
+pub use crate::mount_types::{MountId, MountNsId, ReusedMountId};
+
 pub mod sys;
 
 pub mod fs;
@@ -23,6 +26,10 @@ pub mod mount;
 pub use mount::{Mount, MountSetAttr, MoveMount, OpenTree};
 
 pub mod ns;
+
+mod list;
+pub use list::ListMounts;
+pub use list::{StatMount, StatMountBuilder, list};
 
 /// Wrapper for the `umount2(2)` system call.
 pub fn umount<P>(path: &P, flags: c_int) -> io::Result<()>

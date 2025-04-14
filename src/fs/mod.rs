@@ -10,4 +10,4 @@ pub use read_dir::{ReadDir, read_dir};
 
 pub mod stat;
 #[doc(inline)]
-pub use stat::{Device, Stat};
+pub use stat::Stat;
