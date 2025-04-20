@@ -60,7 +60,11 @@ fn main() -> Result<(), Error> {
     }
     */
 
-    let fd = lisy::pidfd::PidFd::this().context("failed to get pid fd for this process")?;
+    let fd = lisy::pidfd::PidFd::this(Default::default())
+        .context("failed to get pid fd for this process")?;
+
+    eprintln!("{:#?}", fd.info(lisy::pidfd::GetInfoFlags::all())?);
+
     let mnt_ns = fd
         .mount_namespace()
         .context("failed to get current mount namespace")?;

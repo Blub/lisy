@@ -1,6 +1,7 @@
 //! `pidfds` are handles to processes which can be polled and used to send signals and other
 //! operations, they are much more powerful than numerical PIDs.
 
+use std::ffi::{c_int, c_uint, c_void};
 use std::io;
 use std::os::fd::{AsFd, AsRawFd, BorrowedFd, FromRawFd, IntoRawFd, OwnedFd, RawFd};
 
@@ -86,15 +87,58 @@ macro_rules! ns_fd_getters {
 }
 
 impl PidFd {
+    /// Open a pidfd for a process via its process ID.
+    pub fn open(pid: libc::pid_t, flags: PidFdFlags) -> io::Result<Self> {
+        let fd = unsafe { libc::syscall(libc::SYS_pidfd_open, pid, flags.bits()) };
+        io_assert!(fd >= 0);
+        Ok(unsafe { Self::from_raw_fd(i32::try_from(fd).unwrap()) })
+    }
+
     /// Get a pid fd to the current process.
-    pub fn this() -> io::Result<Self> {
+    pub fn this(flags: PidFdFlags) -> io::Result<Self> {
+        let pid = unsafe { libc::getpid() };
+        Self::open(pid, flags)
+    }
+
+    /// Get a file descriptor from the process.
+    ///
+    /// This is *similar* to opening `/proc/pid/fd/FD`, but is actually more equivalent to a
+    /// `dup()` operation on that file descriptor.
+    pub fn get_fd(&self, fd: RawFd) -> io::Result<OwnedFd> {
         unsafe {
-            let pid = libc::getpid();
-            let fd = libc::syscall(libc::SYS_pidfd_open, pid, 0);
+            let fd = libc::syscall(libc::SYS_pidfd_getfd, self.as_raw_fd(), fd, 0);
             io_assert!(fd >= 0);
-            Ok(Self::from_raw_fd(i32::try_from(fd).unwrap()))
+            Ok(OwnedFd::from_raw_fd(i32::try_from(fd).unwrap()))
         }
     }
+
+    /// Send a signal to the process.
+    ///
+    /// This works like `kill(2 h)`.
+    pub fn send_signal(&self, signal: c_int) -> io::Result<()> {
+        let rc = unsafe {
+            libc::syscall(
+                libc::SYS_pidfd_send_signal,
+                self.as_raw_fd(),
+                signal,
+                std::ptr::null::<c_void>(),
+                0,
+            )
+        };
+        io_assert!(rc == 0);
+        Ok(())
+    }
+
+    /*
+    /// Wait on the process.
+    pub fn wait(&self, flags: WaitFlags) -> io::Result<WaitResult> {
+        unsafe {
+            let mut info: libc::siginfo_t = std::mem::zeroed();
+            let rc = libc::waitid(libc::P_PIDFD, self.as_raw_fd(), &raw mut info, flags.bits());
+            io_assert!(rc == 0);
+        }
+    }
+    */
 
     ns_fd_getters! {
         /// Get a handle to the process' cgroup namespace.
@@ -171,7 +215,76 @@ impl PidFd {
 }
 
 bitflags::bitflags! {
-    /// Mount attributes for `Superblock::mount` or Mount::setattr.
+    /// Flags for opening a pid file descriptor.
+    #[derive(Clone, Copy, Debug)]
+    #[repr(transparent)]
+    pub struct PidFdFlags: c_uint {
+        /// Make the pidfd non-blocking.
+        const NONBLOCK  = libc::PIDFD_NONBLOCK;
+    }
+}
+
+impl Default for PidFdFlags {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
+/*
+bitflags::bitflags! {
+    /// Flags for waiting on a pidfd - `EXITED` by default.
+    #[derive(Clone, Copy, Debug)]
+    #[repr(transparent)]
+    pub struct WaitFlags: c_int {
+        /// Return immediately if the child has not exited.
+        const NO_HANG   = libc::WNOHANG;
+
+        /// Leave the child in a waitable state.
+        const NO_WAIT   = libc::WNOWAIT;
+
+        /// Return if the child has exited.
+        const EXITED    = libc::WEXITED;
+
+        /// Return if the child has been stopped by delivery of a signal.
+        const STOPPED   = libc::WSTOPPED;
+
+        /// Return if a previously stopped child has been resumed via `SIGCONT`.
+        const CONTINUED = libc::WCONTINUED;
+    }
+}
+
+impl Default for WaitFlags {
+    fn default() -> Self {
+        Self::EXITED
+    }
+}
+
+/// The result of waiting on a pidfd.
+pub enum WaitResult {
+    /// No state change happened and [`WaitFlags::NO_HANG`] was used.
+    None,
+
+    /// The child exited.
+    Exited(c_int),
+
+    /// The child was killed by a signal.
+    ///
+    /// The boolean indicates whether a core-dump happened.
+    Killed(bool),
+
+    /// A signal stopped the process.
+    Stopped(c_int),
+
+    /// A traced child was trapped.
+    Trapped,
+
+    /// A stopped child was resumed via `SIGCONT`.
+    Continued,
+}
+*/
+
+bitflags::bitflags! {
+    /// Fields to query from a pidfd.
     ///
     /// The default value is `PID | CREDS | CGROUP_ID` as these are returned even if not
     /// requested.
